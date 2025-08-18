@@ -117,3 +117,80 @@ RDP server setup integrates with system firewall (UFW/iptables), configures audi
 
 **Cross-Platform Compatibility**:
 Windows RDP client tools include protocol detection, connection profiling, and network discovery capabilities that work seamlessly with both Windows targets and the configured Kali RDP server.
+
+## Known Issues and Troubleshooting
+
+### Critical Issue: SRFeature Binary Segmentation Fault
+
+**Problem**: The SRFeature binary experiences segmentation faults when launched with GUI, causing service crashes.
+
+**Symptoms**:
+- Service shows "Permission denied" errors in systemd logs
+- Binary crashes with segfault when executed directly
+- PulseAudio connection failures: "Connection refused pa_context_connect() failed"
+- Service starts briefly then crashes when GUI components load
+
+**Diagnostic Commands**:
+```bash
+# Check binary permissions and ownership
+ls -la /opt/splashtop-streamer/SRFeature
+file /opt/splashtop-streamer/SRFeature
+
+# Test binary execution as service user
+sudo -u splashtop-streamer /opt/splashtop-streamer/SRFeature --version
+
+# Monitor service logs in real-time
+sudo journalctl -u SRStreamer.service -f
+
+# Check for missing dependencies
+ldd /opt/splashtop-streamer/SRFeature | grep "not found"
+```
+
+**Root Causes**:
+1. **Library Compatibility**: Ubuntu libraries may be incompatible with Kali's newer glibc/library versions
+2. **PulseAudio Integration**: Service user lacks proper PulseAudio session access
+3. **X11 Display Access**: Insufficient permissions for GUI rendering in systemd context
+4. **Missing Runtime Dependencies**: Some required libraries may not be properly linked
+
+**Fix Approaches** (in order of priority):
+1. **Library Dependency Analysis**: Use `ldd` and `objdump` to identify missing/incompatible libraries
+2. **PulseAudio Configuration**: Configure proper audio session for splashtop-streamer user
+3. **X11 Access Rights**: Ensure proper DISPLAY environment and Xauth permissions
+4. **Alternative Binary Source**: Consider extracting from newer Splashtop releases targeting Debian 12/Ubuntu 24.04
+
+### Troubleshooting Tools
+
+**Diagnostic Script**: `troubleshooting/splashtop-diagnostic.sh`
+- Comprehensive system analysis
+- Service status monitoring
+- Dependency verification
+- Network configuration check
+- Display manager integration status
+
+**Common Fixes**:
+```bash
+# Reset permissions (if corrupted)
+sudo chmod 755 /opt/splashtop-streamer/SRFeature
+sudo chown splashtop-streamer:splashtop-streamer /opt/splashtop-streamer/SRFeature
+
+# Restart service with fresh state
+sudo systemctl stop SRStreamer.service
+sudo systemctl daemon-reload
+sudo systemctl start SRStreamer.service
+
+# Check for library conflicts
+sudo ldconfig
+dpkg -l | grep -E "(libwebkit|libgtk|pulseaudio)"
+```
+
+**Environment Variables for Testing**:
+```bash
+# Run with debugging enabled
+DISPLAY=:0 G_DEBUG=all /opt/splashtop-streamer/SRFeature
+
+# Skip audio initialization (testing)
+PULSE_RUNTIME_PATH=/dev/null /opt/splashtop-streamer/SRFeature
+
+# Force software rendering
+LIBGL_ALWAYS_SOFTWARE=1 /opt/splashtop-streamer/SRFeature
+```
