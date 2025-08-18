@@ -16,14 +16,15 @@ def create_tarball(source_dir, tar_path, compression='xz'):
         'bz2': 'w:bz2'
     }
     
-    with tarfile.open(tar_path, mode_map[compression]) as tar:
+    with tarfile.open(tar_path, mode_map[compression], format=tarfile.GNU_FORMAT) as tar:
         # Change to the source directory to avoid including the full path
         old_cwd = os.getcwd()
         try:
             os.chdir(source_dir)
             for item in os.listdir('.'):
                 print(f"  Adding: {item}")
-                tar.add(item)
+                # Add with GNU format and avoid long path issues
+                tar.add(item, recursive=True)
         finally:
             os.chdir(old_cwd)
     

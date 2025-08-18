@@ -23,8 +23,14 @@ This repository contains a **modified version** of the Splashtop Streamer specif
 ### For Kali Linux (Recommended):
 ```bash
 sudo apt update
+
+# Method 1: Direct installation (try this first)
 sudo dpkg -i Splashtop_Streamer_Kali_amd64.deb
 sudo apt-get install -f  # Fix any remaining dependencies
+
+# Method 2: If you encounter tar/corruption errors, use fallback installer
+chmod +x install-fallback.sh
+./install-fallback.sh
 ```
 
 ### For Ubuntu/Standard Debian:
@@ -68,6 +74,9 @@ splashtop-streamer --version
 ```bash
 # If you get "policykit-1 does not have an installable package" error:
 ./fix-dependencies.sh
+
+# If you get "corrupted filesystem tarfile" or PAX header errors:
+./install-fallback.sh
 
 # If other dependencies are missing:
 sudo apt-get install -f
