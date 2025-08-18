@@ -1,43 +1,87 @@
-# Splashtop Streamer for Kali Linux (DEB, AMD64)
+# Splashtop Streamer for Kali Linux 2025.2
 
-## Kali Linux Compatibility
+A comprehensive solution for installing and configuring Splashtop Streamer on Kali Linux 2025.2 amd64, with additional RDP functionality and troubleshooting tools.
 
-This repository contains a **modified version** of the Splashtop Streamer specifically adapted for **Kali Linux compatibility**. The original Ubuntu package has been repackaged with the following enhancements:
+## 🚀 Quick Start
 
-### ✅ **Supported Versions**
-- **Kali Linux 2025.2** (Latest - Fully Tested)
-- **Kali Linux 2025.1** and newer
-- **Debian Unstable** based distributions
-
-### 🔧 **Key Modifications**
-- **Updated Dependencies**: Added alternatives for newer library versions (fuse3, libgcc-s1, webkit variants)
-- **Enhanced Display Manager Support**: 
-  - GDM3 (GNOME 48 in Kali 2025.2)
-  - LightDM (common in Xfce 4.20.4 - default in Kali)
-  - SDDM (KDE Plasma 6.3 support)
-- **Improved SystemD Service**: Better user management, logging, and restart behavior
-- **Kali-Specific Installation Logic**: Handles Kali Linux environment differences
-
-## Package Versions
-
-### For Kali Linux (Recommended):
+**One-command installation:**
 ```bash
-sudo apt update
+sudo ./install-master.sh
+```
 
-# Method 1: Direct installation (try this first)
+This master script handles everything automatically:
+- ✅ Splashtop Streamer installation with Kali Linux compatibility fixes
+- ✅ Dependency resolution and library path configuration  
+- ✅ Service permissions and binary executable fixes
+- ✅ UFW firewall rules for remote access
+- ✅ Root access enablement and RDP server setup
+- ✅ Comprehensive troubleshooting tools
+
+## 📦 What's Included
+
+### Core Package
+- **`Splashtop_Streamer_Kali_amd64.deb`** - Modified Splashtop package with Kali Linux 2025.2 dependencies
+- **`deb_extractor.py`** - Custom extraction tool for .deb packages  
+- **`rebuild_deb.py`** - Package rebuilding script with GNU tar format compatibility
+
+### Setup Scripts
+- **`install-master.sh`** - Master installation script (recommended)
+- **`scripts/enable-root-login.sh`** - Enable root desktop login for multiple display managers
+- **`scripts/setup-windows-rdp-client.sh`** - Configure FreeRDP and Remmina for Windows RDP connections
+- **`scripts/setup-kali-rdp-server.sh`** - Install and configure XRDP server for incoming connections
+- **`scripts/master-setup.sh`** - Interactive setup coordinator for all additional functionality
+
+### Fix Scripts
+- **`fix-library-path.sh`** - Resolves missing library issues and binary permissions
+- **`fix-dependencies.sh`** - Automated dependency resolution for Kali Linux
+- **`install-fallback.sh`** - Alternative installation method for problematic systems
+
+### Troubleshooting Toolkit
+- **`troubleshooting/master-troubleshoot.sh`** - Interactive diagnostic coordinator
+- **`troubleshooting/crash-analyzer.sh`** - Specialized crash investigation with core dump analysis
+- **`troubleshooting/system-diagnostic.sh`** - Complete system health assessment  
+- **`troubleshooting/splashtop-diagnostic.sh`** - Service-specific diagnostics
+- **`troubleshooting/network-diagnostic.sh`** - Network connectivity and firewall analysis
+- **`troubleshooting/log-analyzer.sh`** - Intelligent log analysis with pattern recognition
+- **`troubleshooting/dependency-check.sh`** - Comprehensive dependency verification
+
+## 🔧 Installation Methods
+
+### Method 1: Master Installation (Recommended)
+```bash
+git clone https://github.com/Ununp3ntium115/Kali_splashtop_fix.git
+cd Kali_splashtop_fix
+sudo ./install-master.sh
+```
+
+### Method 2: Manual Step-by-Step
+```bash
+# 1. Install Splashtop package
 sudo dpkg -i Splashtop_Streamer_Kali_amd64.deb
-sudo apt-get install -f  # Fix any remaining dependencies
 
-# Method 2: If you encounter tar/corruption errors, use fallback installer
-chmod +x install-fallback.sh
-./install-fallback.sh
+# 2. Fix any dependency issues
+sudo ./fix-dependencies.sh
+
+# 3. Fix library paths and permissions
+sudo ./fix-library-path.sh
+
+# 4. Configure additional features (optional)
+./scripts/master-setup.sh
 ```
 
-### For Ubuntu/Standard Debian:
+### Method 3: Fallback Installation
 ```bash
-sudo apt update  
-sudo apt install ./Splashtop_Streamer_Ubuntu_amd64.deb
+# If standard installation fails
+sudo ./install-fallback.sh
 ```
+
+## 🛠️ System Requirements
+
+- **OS:** Kali Linux 2025.2 amd64
+- **Memory:** 2GB+ RAM recommended
+- **Network:** Internet connection for dependency installation
+- **Display:** X11 or Wayland display server
+- **User:** sudo privileges required for installation
 
 ## Show command line usage
 
