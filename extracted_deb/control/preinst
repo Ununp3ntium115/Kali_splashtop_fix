@@ -1,0 +1,47 @@
+#!/bin/sh
+set -e
+#set -x
+#echo preinst $@
+
+SRS_USER=splashtop-streamer
+SRS_GROUP=splashtop-streamer
+SRS_HOME=/opt/splashtop-streamer
+
+case "$1" in
+install|upgrade)
+	if [ "$1" = "install" ]; then
+		echo "[Splashtop Streamer] Install streamer"
+	fi
+
+	if [ "$1" = "upgrade" ]; then
+		echo "[Splashtop Streamer] Upgrade streamer"
+	fi
+
+	# 1. Create group if not existing
+	if ! getent group | grep -q "^$SRS_GROUP:" ; then
+		echo -n "[Splashtop Streamer] Adding group \"$SRS_GROUP\"..."
+		addgroup --quiet --system $SRS_GROUP >/dev/null 2>&1 || true
+		echo "Done"
+	fi
+
+	# 2. Create user if not existing
+	if ! getent passwd | grep -q "^$SRS_USER:"; then
+		echo -n "[Splashtop Streamer] Adding user \"$SRS_USER\"..."
+		adduser --quiet \
+			--system \
+			--ingroup $SRS_GROUP \
+			--HOME $SRS_HOME \
+			--no-create-home \
+			--disabled-password \
+			$SRS_USER >/dev/null 2>&1 || true
+		echo "Done"
+	fi
+
+	# 3. Adjust passwd entry
+	usermod -c "Splashtop Remote Streamer" $SRS_USER >/dev/null 2>&1 || true
+
+	;;
+
+esac
+
+exit 0

@@ -1,0 +1,4 @@
+[Configure Splashtop Streamer]
+Identity=unix-group:sudo;unix-group:wheel
+Action=com.splashtop.streamer.config
+ResultActive=yes

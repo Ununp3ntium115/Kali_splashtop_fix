@@ -1,0 +1,498 @@
+#!/bin/bash
+
+function main()
+{
+  if [[ ! -f $SPT_DIR/SRUtility ]]; then
+    echo "Incomplete installation, please reinstall"
+    return 1
+  fi
+
+  ret=0
+  case "$1" in
+    'config'              )        RunSplashtopConfig "$@" ;;
+    'debug'               )        RunSplashtopDebug "$@" ;;
+    'deploy'              )        RunSplashtopDeploy "$@" ;;
+    'help'                )        RunSplashtopHelp "$@" ;;
+    'rmm'                 )        RunSplashtopRmm "$@" ;;
+    'version'             )        RunSplashtopHelp "$@" ;;
+    *                     )        RunSplashtopGUI "$@" ;;
+  esac
+
+  ret=$?
+
+  return $ret
+}
+
+function Init()
+{
+  export LD_LIBRARY_PATH=$SPT_DIR
+}
+
+function InitGui()
+{
+  # To enable AppIndicator on Gnome3 with Wayland
+  export GDK_BACKEND=x11
+}
+
+function LockStartup()
+{
+  exec 300>> "/dev/null" || echo "LockStartup: internal error $?"
+  if flock -n 300
+  then
+    return 0
+  else
+    return 1
+  fi
+}
+
+function UnlockStartup()
+{
+    flock -u -n 300
+    exec 300<&-
+}
+
+function RunSplashtopGUI()
+{
+  InitGui
+
+  if [ ! -f $SPT_DIR/SRStreamer ]; then
+    echo "The installed Streamer does not include GUI frontend."
+    RunSplashtopHelp
+    return 1
+  fi
+
+  LockStartup
+  ret=$?
+  if [ "$ret" -eq 0 ]; then
+    echo "Streamer is not running"
+  else
+    echo "Streamer is already running $?"
+  fi
+
+  echo "Launch streamer UI..."
+  HIDE_WINDOW=0 $SPT_DIR/SRStreamer
+  ret=$?
+
+  UnlockStartup
+
+  return $ret
+}
+
+function RunSplashtopHelp()
+{
+  if [[ "version" == "$1" ]]; then
+    $SPT_DIR/SRUtility --version
+    return $?
+  else
+    echo "Usage: splashtop-streamer <help|config|deploy|debug|rmm|version>"
+    echo "Type \"splashtop-streamer COMMAND\" for more information"
+    return 1
+  fi
+}
+
+function RunSplashtopDeploy()
+{
+  ret=1
+
+  dcode=""
+  srvid=""
+  if [ -f "/opt/splashtop-streamer/config/global.conf" ]; then
+    srvid=$(cat /opt/splashtop-streamer/config/global.conf | grep CloudServerID= | cut -d'=' -f2)
+  fi
+
+  if [[ "245" == "$srvid" ]]; then
+    gateway=""
+    if [ $# -eq 3 ]; then
+      echo "Gateway: $2"
+      gateway=$2
+      echo "Code: $3"
+      dcode=$3
+    else
+      echo "Usage: splashtop-streamer deploy GATEWAY CODE"
+      echo
+      echo "Enter gateway address"
+      read -p "Gateway: " gateway
+      echo "Enter code from your admin to allow access to this computer"
+      read -p "Code: " dcode
+    fi
+
+    if [ -z $gateway ]; then
+      echo "Gateway is empty"
+      return 1
+    fi
+
+    gw_proto=$(echo $gateway | grep '://')
+    if [[ $gw_proto == "" ]]; then
+      gw_proto=""
+      gw_url=`echo $gateway`
+    else
+      gw_proto="`echo $gateway | grep '://' | sed -e's,^\(.*://\).*,\1,g'`"
+      gw_url=`echo $gateway | sed -e s,$gw_proto,,g`
+    fi
+    gw_userpass="`echo $gw_url | grep @ | cut -d@ -f1`"
+    gw_hostport=`echo $gw_url | sed -e s,$gw_userpass@,,g | cut -d/ -f1`
+    gw_port=`echo $gw_hostport | grep : | cut -d: -f2`
+    if [ -n "$gw_port" ]; then
+      gw_host=`echo $gw_hostport | grep : | cut -d: -f1`
+    else
+      gw_host=$gw_hostport
+      gw_port="443"
+    fi
+
+    $SPT_DIR/SRUtility --config --key user_server --value $gw_host
+    $SPT_DIR/SRUtility --config --key user_port --value $gw_port
+  else
+    if [ $# -eq 2 ]; then
+      dcode=$2
+    else
+      echo "Usage: splashtop-streamer deploy CODE"
+      echo
+      echo "Enter code from your admin to allow access to this computer:"
+      read -p "" dcode
+    fi
+  fi
+
+  if [ -z $dcode ]; then
+    echo "Deployment code is empty"
+    return 1
+  fi
+
+  if [[ $(id -u) -eq 0 ]]; then
+    $SPT_DIR/SRUtility --deploy $dcode
+    ret=$?
+    systemctl restart SRStreamer
+  else
+    $SPT_DIR/SRUtility --deploy $dcode --restart
+    ret=$?
+  fi
+
+  if [ "$ret" -eq 0 ]; then
+    echo "Deploy succeeded"
+  else
+    echo "Deploy failed, please reinstall or contact your admin."
+  fi
+
+  sys_os=$(cat /opt/splashtop-streamer/config/global.conf | grep SysOSName)
+  if [[ $sys_os == "" ]]; then
+    sys_name="$(cat /etc/os-release | sed -n -e 's/^\s*NAME\s*=\s*//p' | sed 's/"//g')"
+    sys_version="$(cat /etc/os-release | sed -n -e 's/^\s*VERSION_ID\s*=\s*//p' | sed 's/"//g')"
+    $SPT_DIR/SRUtility --config --key os_name --value "$sys_name $sys_version"
+  fi
+
+  return $ret
+}
+
+function RunSplashtopRmm()
+{
+  ret=1
+
+  if [ $# -eq 1 ]; then
+    $SPT_DIR/SRUtility --get-rmm-uri
+    ret=$?
+  elif [ $# -eq 2 ]; then
+    rmm_uri=$2
+    if [ -z $rmm_uri ]; then
+      echo "RMM URI is empty"
+    else
+      $SPT_DIR/SRUtility --handle-uri $rmm_uri
+      ret=$?
+    fi
+  else
+      echo "Usage: splashtop-streamer rmm [URI]"
+  fi
+
+  return $ret
+}
+
+function RunSplashtopDebug()
+{
+  if [ $# -eq 1 ]; then
+    echo "Usage: splashtop-streamer debug <upload|level|sink|site|gdm-disable-save-to-disk>"
+    return 1
+  fi
+
+  cmd=$2
+  arg=$3
+
+  if [[ "$cmd" == "upload" ]]; then
+    $SPT_DIR/SRUtility --upload-log
+    return $?
+  elif [[ "$cmd" == "level" ]]; then
+    if [[ "$3" == "trace" ]] || [[ "$3" == "debug" ]] || [[ "$3" == "info" ]] || [[ "$3" == "warn" ]] || [[ "$3" == "err" ]] || [[ "$3" == "critical" ]] || [[ "$3" == "off" ]]; then
+      $SPT_DIR/SRUtility --config --key log_level --value $3
+      return $?
+    else
+      echo "Usage: splashtop-streamer debug level <trace|debug|info|warn|err|critical|off>"
+      return 1
+    fi
+  elif [[ "$cmd" == "sink" ]]; then
+    if [[ "$3" == "rotating" ]] || [[ "$3" == "syslog" ]] || [[ "$3" == "stdout" ]]; then
+      $SPT_DIR/SRUtility --config --key log_sink --value $3
+      return $?
+    else
+      echo "Usage: splashtop-streamer debug sink <rotating|syslog|stdout>"
+      return 1
+    fi
+  elif [[ "$cmd" == "site" ]]; then
+    if [[ "$3" == "beqa" ]] || [[ "$3" == "gateway" ]] || [[ "$3" == "production" ]]; then
+      $SPT_DIR/SRUtility --config --key server_id --value $3
+      return $?
+    else
+      echo "Usage: splashtop-streamer debug site <beqa|gateway|production>"
+      return 1
+    fi
+  elif [[ "$cmd" == "gdm-disable-save-to-disk" ]]; then
+    if [[ "$3" == "true" ]] || [[ "$3" == "false" ]] && [[ $# -eq 3 ]]; then
+      $SPT_DIR/script/gdm-disable-save-to-disk.sh $3
+      return $?
+    else
+      echo "Usage: splashtop-streamer debug gdm-disable-save-to-disk <true|false>"
+      return 1
+    fi
+  else
+    echo "Unknown debug option: $cmd"
+    return 1
+  fi
+}
+
+function RunSplashtopConfig()
+{
+  if [ $# -ne 2 ]; then
+    RunSplashtopConfigUsage "all"
+    return 1
+  fi
+
+  cmd=$(echo $2|cut -d'=' -f1)
+  val=""
+  if [[ "$2" == *"="* ]]; then
+    val=$(echo $2|cut -d'=' -f2)
+  fi
+
+  if [[ "$cmd" == "-devname" ]]; then
+    if [ "" == "$val" ]; then
+      RunSplashtopConfigUsage "devname"
+      return 1
+    fi
+
+    if [[ $val =~ "<>,;:\"*+=\\|?" ]]; then
+      RunSplashtopConfigUsage "devname"
+      return 1
+    fi
+
+    if [[ ${#val} -gt 64 ]]; then
+      RunSplashtopConfigUsage "devname"
+      return 1
+    fi
+
+    echo "Set streamer Name" $val
+  elif  [[ "$cmd" == "-lock_screen_on_connect" ]]; then
+    if [ "" == "$val" ]; then
+      RunSplashtopConfigUsage "lock_screen_on_connect"
+      return 1
+    fi
+
+    echo "Set lock_screen_on_connect option" $val
+  elif  [[ "$cmd" == "-hide_tray_icon" ]]; then
+    if [ "" == "$val" ]; then
+      RunSplashtopConfigUsage "hide_tray_icon"
+      return 1
+    fi
+
+    echo "Set hide tray icon option" $val
+  elif  [[ "$cmd" == "-lock_screen_on_disconnect" ]]; then
+    if [ "" == "$val" ]; then
+      RunSplashtopConfigUsage "lock_screen_on_disconnect"
+      return 1
+    fi
+
+    echo "Set lock_screen_on_disconnect option" $val
+  elif  [[ "$cmd" == "-resetuuid" ]]; then
+    echo "Reset Streamer ID"
+    if [ -f "/opt/splashtop-streamer/config/global.conf" ]; then
+      val=$(cat /opt/splashtop-streamer/config/global.conf | grep ServerUUID= | cut -d'=' -f2)
+    fi
+  elif  [[ "$cmd" == "-securitycode" ]] || [[ "$cmd" == "-sec_code" ]]; then
+    if [ "" == "$val" ]; then
+      RunSplashtopConfigUsage "securitycode"
+      return 1
+    fi
+
+    if [[ $val =~ [^0-9A-Za-z] ]]; then
+      RunSplashtopConfigUsage "securitycode"
+      return 1
+    fi
+
+    if [[ ${#val} -lt 8 ]] || [[ 20 -lt ${#val} ]]; then
+      RunSplashtopConfigUsage "securitycode"
+      return 1
+    fi
+
+    echo "Set security code" $val
+  elif  [[ "$cmd" == "-sec_opt" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" -a "$val" != "2" ]; then
+      RunSplashtopConfigUsage "sec_opt"
+      return 1
+    fi
+
+    echo "Set security option" $val
+  elif  [[ "$cmd" == "-req_perm" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" -a "$val" != "2" -a "$val" != "3" ]; then
+      RunSplashtopConfigUsage "req_perm"
+      return 1
+    fi
+
+    echo "Set request permission option" $val
+  elif  [[ "$cmd" == "-sound" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" -a "$val" != "2" ]; then
+      RunSplashtopConfigUsage "sound"
+      return 1
+    fi
+
+    echo "Set sound option" $val
+  elif [[ "$cmd" == "-auto_update" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" ]; then
+      RunSplashtopConfigUsage "auto_update"
+      return 1
+    fi
+
+    echo "Set auto update option" $val
+  elif [[ "$cmd" == "-idle_session_timeout" ]]; then
+    if [[ $val -lt 0 || $val -gt 9999 ]]; then
+      RunSplashtopConfigUsage "idle_session_timeout"
+      return 1
+    fi
+
+    echo "Set idle session timeout" $val
+  elif [[ "$cmd" == "-sync_keyboard_locks" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" ]; then
+      RunSplashtopConfigUsage "sync_keyboard_locks"
+      return 1
+    fi
+
+    echo "Set sync keyboard locks" $val
+  elif [[ "$cmd" == "-fips" ]]; then
+    if [ "$val" != "0" -a "$val" != "1" ]; then
+      RunSplashtopConfigUsage "fips"
+      return 1
+    fi
+
+    echo "Set FIPS" $val
+  elif  [[ "$cmd" == "-list" ]]; then
+    val="all"
+  else
+    RunSplashtopConfigUsage "all"
+    return 1
+  fi
+
+  command="${cmd##-}"
+  $SPT_DIR/SRUtility --config --key $command --value $val
+  return $?
+}
+
+function RunSplashtopConfigUsage()
+{
+  if [[ "all" == "$1" ]]; then
+    echo "Usage: splashtop-streamer config OPTION=ARG"
+    echo
+    echo "Options:"
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "auto_update" ]]; then
+    echo "  -auto_update=<arg>  Auto update option"
+    echo "                        0: Disable"
+    echo "                        1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "devname" ]]; then
+    echo "  -devname=<arg>      Streamer Name"
+    echo "                        No encoding character, UTF8/unicode"
+    echo "                        Maximum 64 characters, exclude < > , ; : \" * + = \\ | ? "
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "hide_tray_icon" ]]; then
+    echo "  -hide_tray_icon=<arg>  Hide tray icon option"
+    echo "                           0: Disable"
+    echo "                           1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "lock_screen_on_connect" ]]; then
+    echo "  -lock_screen_on_connect=<arg>  Lock screen at the start of session option"
+    echo "                                   0: Disable"
+    echo "                                   1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "lock_screen_on_disconnect" ]]; then
+    echo "  -lock_screen_on_disconnect=<arg>  Lock screen at the end of session option"
+    echo "                                      0: Disable"
+    echo "                                      1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "resetuuid" ]]; then
+    echo "  -resetuuid          Regenerate Streamer UUID"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "securitycode" ]] || [[ "$1" == "sec_code" ]]; then
+    echo "  -securitycode=<arg>  Security code"
+    echo "  -sec_code=<arg>        8 to 20 characters. Letters and numbers only."
+    echo "                         Must contain at least one letter and one number."
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "sec_opt" ]]; then
+    echo "  -sec_opt=<arg>      Security option"
+    echo "                        0: No additional password"
+    echo "                        1: Require security code"
+    echo "                        2: Require system login"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "req_perm" ]]; then
+    echo "  -req_perm=<arg>     Request permission option"
+    echo "                        0: Off"
+    echo "                        1: Reject connection after request expires"
+    echo "                           (At login screen, reject automatically)"
+    echo "                        2: Allow connection after request expires"
+    echo "                        3: Reject connection after request expires"
+    echo "                           (At login screen, allow automatically)"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "sound" ]]; then
+    echo "  -sound=<arg>        Sound option"
+    echo "                        0: Output sound on this computer only"
+    echo "                        1: Output sound over the remote connection only"
+    echo "                        2: Output sound both over the remote connection and on this computer"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "idle_session_timeout" ]]; then
+    echo "  -idle_session_timeout=<arg>  Timeout in minutes (0 - 9999)"
+    echo "                               Remote sessions will automatically disconnect after"
+    echo "                               <arg> minutes of no activity (0 means no timeout)."
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "sync_keyboard_locks" ]]; then
+    echo "  -sync_keyboard_locks=<arg>  Sync keyboard CapsLock, NumLock and ScrollLock"
+    echo "                                0: Disable"
+    echo "                                1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "fips" ]]; then
+    echo "  -fips=<arg>         OpenSSL FIPS mode, streamer service will be restarted after set"
+    echo "                        0: Disable"
+    echo "                        1: Enable"
+    echo
+  fi
+
+  if [[ "all" == "$1" ]] || [[ "$1" == "list" ]]; then
+    echo "  -list               List all configutation"
+  fi
+}

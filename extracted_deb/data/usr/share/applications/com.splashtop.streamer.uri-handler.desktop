@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Splashtop Streamer - URI Handler
+GenericName=Remote Computer Access
+Comment=Remotely access your desktop from any device, anywhere!
+Exec=/opt/splashtop-streamer/SRUtility --handle-uri %u
+Type=Application
+Categories=GNOME;GTK;Network;RemoteAccess;
+NoDisplay=true
+MimeType=x-scheme-handler/st-streamer

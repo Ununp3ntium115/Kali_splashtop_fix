@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Splashtop Streamer
+GenericName=Remote Computer Access
+Comment=Remotely access your desktop from any device, anywhere!
+Exec=/usr/bin/env HIDE_WINDOW=0 /opt/splashtop-streamer/SRStreamer
+Type=Application
+Icon=com.splashtop.streamer
+Categories=GNOME;GTK;Network;RemoteAccess;

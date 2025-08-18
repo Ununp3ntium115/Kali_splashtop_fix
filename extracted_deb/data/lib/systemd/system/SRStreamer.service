@@ -1,0 +1,23 @@
+[Unit]
+Description=Splashtop Streamer Daemon
+Wants=network-online.target
+After=network.target network-online.target graphical-session.target
+Requisite=network.target
+
+[Service]
+Environment="LD_LIBRARY_PATH=/opt/splashtop-streamer"
+Type=simple
+User=splashtop-streamer
+Group=splashtop-streamer
+PIDFile=/run/SRStreamer.pid
+ExecStart=/opt/splashtop-streamer/SRFeature
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillMode=mixed
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target graphical.target
+

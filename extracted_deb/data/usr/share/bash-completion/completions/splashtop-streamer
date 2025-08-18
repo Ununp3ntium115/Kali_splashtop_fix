@@ -1,0 +1,94 @@
+#
+# splashtop-streamer bash-completion
+#
+# See Programmable Completion:
+# https://www.gnu.org/software/bash/manual/html_node/Programmable-Completion.html
+#
+
+#
+# Completion function for the splashtop-streamer command.
+#
+# The shell function is executed in the current shell environment.
+# When it is executed, $1 is the name of the command whose arguments are being
+# completed, $2 is the word being completed, and $3 is the word preceding the
+# word being completed.
+# When it finishes, the possible completions are retrieved from the value of
+# the COMPREPLY array variable.
+#
+_splashtop_streamer()
+{
+    COMPREPLY=()
+
+    local cur prev words cword split
+    _init_completion -s || return
+
+    local first="${words[1]}"
+    local opts_root="help config deploy debug rmm version"
+
+    # Root level
+    if [[ ${COMP_CWORD} -eq 1 ]] ; then
+        COMPREPLY=($(compgen -W "${opts_root}" -- ${cur}))
+        return 0
+    fi
+
+    # config ...
+    local opts_config="-auto_update -devname -fips -lock_screen_on_connect \
+                       -lock_screen_on_disconnect -sound -req_perm -resetuuid \
+                       -securitycode -sec_code -sec_opt -idle_session_timeout \
+                       -hide_tray_icon -sync_keyboard_locks -list"
+
+    if [[ ${first} == "config" ]] ; then
+
+        if [[ ${COMP_CWORD} -eq 2 ]] ; then
+            COMPREPLY=($(compgen -W "${opts_config}" -- ${cur}))
+            return 0
+        fi
+    fi
+
+    # debug ...
+    local opts_debug="upload level sink site gdm-disable-save-to-disk"
+
+    if [[ ${first} == "debug" ]]; then
+        if [[ ${COMP_CWORD} -eq 2 ]] ; then
+            COMPREPLY=($(compgen -W "${opts_debug}" -- ${cur}))
+            return 0
+        fi
+
+        # debug level ...
+        if [[ ${COMP_CWORD} -eq 3 && ${prev} == "level" ]] ; then
+            local opts_debug_level="trace debug info warn err critical off"
+
+            COMPREPLY=($(compgen -W "${opts_debug_level}" -- ${cur}))
+            return 0
+        fi
+
+        # debug sink ...
+        if [[ ${COMP_CWORD} -eq 3 && ${prev} == "sink" ]] ; then
+            local opts_debug_sink="rotating syslog stdout"
+
+            COMPREPLY=($(compgen -W "${opts_debug_sink}" -- ${cur}))
+            return 0
+        fi
+
+        # debug site ...
+        if [[ ${COMP_CWORD} -eq 3 && ${prev} == "site" ]] ; then
+            local opts_debug_site="beqa gateway production"
+
+            COMPREPLY=($(compgen -W "${opts_debug_site}" -- ${cur}))
+            return 0
+        fi
+
+        # debug gdm-disable-save-to-disk...
+        if [[ ${COMP_CWORD} -eq 3 && ${prev} == "gdm-disable-save-to-disk" ]] ; then
+            local opts_debug_gdm_disable_save_to_disk="true false"
+
+            COMPREPLY=($(compgen -W "${opts_debug_gdm_disable_save_to_disk}" -- ${cur}))
+            return 0
+        fi
+
+    fi
+
+}
+
+# Bind completion to splashtop-streamer command
+complete -F _splashtop_streamer splashtop-streamer

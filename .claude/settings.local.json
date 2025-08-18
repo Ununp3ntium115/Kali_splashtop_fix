@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tar:*)",
+      "Bash(mkdir:*)",
+      "Bash(dpkg-deb:*)",
+      "Bash(ar:*)",
+      "Bash(python:*)",
+      "Bash(wsl:*)",
+      "WebSearch",
+      "Bash(chmod:*)",
+      "Bash(git config:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

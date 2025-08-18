@@ -1,0 +1,8 @@
+#!/bin/bash
+
+SPT_SCR_DIR="$(dirname "$(readlink -e "$0")")"
+SPT_DIR="$(dirname "$SPT_SCR_DIR")"
+cd $SPT_DIR
+
+source "$SPT_SCR_DIR/spt_main"
+main "$@"

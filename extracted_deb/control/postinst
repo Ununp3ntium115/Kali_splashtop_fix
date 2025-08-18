@@ -1,0 +1,104 @@
+#!/bin/sh
+set -e
+#set -x
+#echo "postinst $@"
+
+SRS_USER=splashtop-streamer
+SRS_GROUP=splashtop-streamer
+SRS_HOME=/opt/splashtop-streamer
+
+if [ "$1" = "configure" ]; then
+	echo "[Splashtop Streamer] Configure streamer"
+	chown -R $SRS_USER:$SRS_GROUP $SRS_HOME/*
+	mkdir -p $SRS_HOME/config/
+	chown -R $SRS_USER:$SRS_GROUP $SRS_HOME/config
+	chmod 2775 $SRS_HOME/config
+	chmod -f 0664 $SRS_HOME/config/* || true
+	chmod -f 0770 $SRS_HOME/config/ssl || true
+	chmod -f 0664 $SRS_HOME/config/ssl/* || true
+	mkdir -p $SRS_HOME/dump/
+	chown -R $SRS_USER:$SRS_GROUP $SRS_HOME/dump
+	chmod 2775 $SRS_HOME/dump
+	chmod -f 0600 $SRS_HOME/dump/* || true
+	mkdir -p $SRS_HOME/log/
+	chown -R $SRS_USER:$SRS_GROUP $SRS_HOME/log
+	chmod 2775 $SRS_HOME/log
+	chmod -f 0664 $SRS_HOME/log/* || true
+	chown $SRS_USER:$SRS_GROUP $SRS_HOME/SRStreamer
+	chmod 2755 $SRS_HOME/SRStreamer
+	chown $SRS_USER:$SRS_GROUP $SRS_HOME/SRChat
+	chmod 2755 $SRS_HOME/SRChat
+	chown $SRS_USER:$SRS_GROUP $SRS_HOME/SRUtility
+	chmod 2755 $SRS_HOME/SRUtility
+
+	if [ ! -f "/usr/bin/splashtop-streamer" ]; then
+		echo "[Splashtop Streamer] Install user binary link"
+		ln -sf $SRS_HOME/script/splashtop-streamer /usr/bin/splashtop-streamer
+	fi
+
+	#
+	# WORKAROUND
+	# In Ubuntu 20.04 MATE Desktop Environment, the desktop entry for "Splashtop Streamer"
+	# cannot be found in brisk-menu immediately after installed the .deb.
+	# Append an new line to /usr/share/applications/com.splashtop.streamer.desktop
+	# to trigger the brisk-menu to show "Splashtop Streamer" immediately.
+	#
+	echo "" >> /usr/share/applications/com.splashtop.streamer.desktop
+
+	# Ubuntu
+	if [ -e /etc/gdm3/custom.conf ];then
+		if grep -Fq "#WaylandEnable=false" /etc/gdm3/custom.conf; then
+			REBOOT_REQUIRED="1"
+		fi
+		sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
+	fi
+
+	# Debian & Kali Linux
+	if [ -e /etc/gdm3/daemon.conf ];then
+		if grep -Fq "#WaylandEnable=false" /etc/gdm3/daemon.conf; then
+			REBOOT_REQUIRED="1"
+		fi
+		sed -i 's/#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/daemon.conf
+	fi
+
+	# Kali Linux specific - check for lightdm (common in Kali)
+	if [ -e /etc/lightdm/lightdm.conf ] || [ -d /etc/lightdm/lightdm.conf.d/ ]; then
+		echo "[Splashtop Streamer] Detected LightDM - Kali Linux configuration"
+		# LightDM doesn't use Wayland by default, but ensure X11 session
+		if [ -d /etc/lightdm/lightdm.conf.d/ ]; then
+			echo "[Seat:*]" > /etc/lightdm/lightdm.conf.d/95-splashtop.conf
+			echo "user-session=xfce" >> /etc/lightdm/lightdm.conf.d/95-splashtop.conf || true
+		fi
+	fi
+
+	# Check for SDDM (another common display manager)
+	if [ -e /etc/sddm.conf ] || [ -d /etc/sddm.conf.d/ ]; then
+		echo "[Splashtop Streamer] Detected SDDM display manager"
+		# SDDM typically uses X11 by default, no specific changes needed
+	fi
+
+	# Allow GDM3 in wayland mode to save screeshot to disk, reboot is required
+	GDM_SETTINGS_AUTO_PATCH="0" # Experimental - disabled for now
+	if [ "$GDM_SETTINGS_AUTO_PATCH" = "1" ]; then
+		REBOOT_REQUIRED="1"
+		echo "[Splashtop Streamer] Enable gdm to save file to disk for screenshot in wayland mode"
+		$SRS_HOME/script/gdm-disable-save-to-disk.sh false || true
+	fi
+
+	systemctl daemon-reload
+	echo "[Splashtop Streamer] Enable service"
+	systemctl reenable SRStreamer.service
+	echo "[Splashtop Streamer] Start service"
+	systemctl restart SRStreamer.service
+
+	if [ "$REBOOT_REQUIRED" = "1" ]; then
+		echo "[Splashtop Streamer]: =============================="
+		echo "[Splashtop Streamer]: Please reboot to apply changes"
+		echo "[Splashtop Streamer]: =============================="
+	fi
+
+fi
+
+/opt/splashtop-streamer/SRUtility --config --key update_need_report --value 1 || true
+exit 0
+

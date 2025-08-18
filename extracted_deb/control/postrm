@@ -1,0 +1,59 @@
+#!/bin/sh
+#set -x
+#echo postrm $@
+
+SRS_USER=splashtop-streamer
+SRS_GROUP=splashtop-streamer
+SRS_HOME=/opt/splashtop-streamer
+
+case "$1" in
+remove)
+	if [ -f /tmp/splashtop-streamer/sru ]; then
+		echo "[Splashtop Streamer] Remove streamer"
+		/tmp/splashtop-streamer/sru --remove || true
+		rm -rf /tmp/splashtop-streamer/
+	fi
+
+	if [ -f /opt/splashtop-streamer/libxcb-util.so.0 ]; then
+		rm -rf /opt/splashtop-streamer/libxcb-util.so.0
+	fi
+
+	if [ -d "$SRS_HOME/config/" ]; then
+		echo "[Splashtop Streamer] Remove settings"
+		rm -rf $SRS_HOME/config
+	fi
+
+	find /home -type f | grep /.config/autostart/com.splashtop.streamer.desktop | xargs rm -f
+	rm -f /usr/bin/splashtop-streamer
+	rm -rf $SRS_HOME/dump
+	rm -rf $SRS_HOME/log
+	rm -rf $SRS_HOME/.keyring
+
+	#
+	# Do not delete user %{SRS_USER} and group %{SRS_GROUP} on uninstall
+	#
+	# See "Do not remove users or groups"
+	# https://fedoraproject.org/wiki/Packaging:UsersAndGroups#Allocation_Strategies
+	#
+	# echo "[Splashtop Streamer] Deleting user $SRS_USER"...
+	# deluser --quiet $SRS_USER || true
+	# echo Done
+	# echo "[Splashtop Streamer] Deleting group $SRS_GROUP"...
+	# delgroup --quiet --only-if-empty $SRS_GROUP || true
+	# echo Done
+	#
+	;;
+
+upgrade)
+	# Do nothing
+	;;
+
+purge)
+	# Do nothing
+	;;
+
+esac
+
+# dh_installdeb will replace this with shell code automatically
+
+exit 0

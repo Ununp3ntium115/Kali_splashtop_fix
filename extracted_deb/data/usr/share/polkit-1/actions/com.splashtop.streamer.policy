@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN" "http://www.freedesktop.org/standards/PolicyKit/1.0/policyconfig.dtd">
+<policyconfig>
+  <vendor>Splashtop Inc.</vendor>
+  <vendor_url>https://www.splashtop.com</vendor_url>
+  <icon_name>com.splashtop.streamer</icon_name>
+
+  <action id="com.splashtop.streamer.config">
+    <description gettext-domain="com.splashtop.streamer">Manage Splashtop Streamer</description>
+    <message gettext-domain="com.splashtop.streamer">Authentication is required to configure Splashtop Streamer</message>
+    <defaults>
+      <allow_any>auth_admin_keep</allow_any>
+      <allow_inactive>auth_admin_keep</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+  </action>
+</policyconfig>

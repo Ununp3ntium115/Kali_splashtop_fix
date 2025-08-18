@@ -1,0 +1,11 @@
+polkit.addRule(function(action, subject) {
+    if (action.id == "com.splashtop.streamer.config" &&
+        subject.active == true && subject.local == true) {
+        if (subject.isInGroup("sudo") ||
+            subject.isInGroup("wheel")) {
+            return polkit.Result.YES;
+        } else {
+            return polkit.Result.AUTH_ADMIN_KEEP;
+        }
+    }
+});

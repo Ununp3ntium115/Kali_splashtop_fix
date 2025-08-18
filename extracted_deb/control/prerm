@@ -1,0 +1,34 @@
+#!/bin/sh
+set -e
+#set -x
+#echo prerm $@
+
+SRS_USER=splashtop-streamer
+SRS_GROUP=splashtop-streamer
+SRS_HOME=/opt/splashtop-streamer
+
+if [ "$1" = "remove" ]; then
+	if [ -f "$SRS_HOME/SRUtility" ]; then
+		mkdir -p /tmp/splashtop-streamer/
+		cp $SRS_HOME/SRUtility /tmp/splashtop-streamer/sru
+		cp $SRS_HOME/enc*.bin /tmp/splashtop-streamer/
+	fi
+
+	GDM_SETTINGS_AUTO_PATCH="0" # Experimental - disabled for now
+	if [ "$GDM_SETTINGS_AUTO_PATCH" = "1" ]; then
+		echo "[Splashtop Streamer] Disable gdm to save file to disk"
+		$SRS_HOME/script/gdm-disable-save-to-disk.sh true || true
+	fi
+fi
+
+# remove or upgrade
+echo "[Splashtop Streamer] Stop streamer service"
+systemctl stop SRStreamer.service
+echo "[Splashtop Streamer] Disable streamer service"
+systemctl disable SRStreamer.service
+
+# Kill SRStreamer/SRChat processes, ignore error here
+killall -q -9 SRStreamer || true
+killall -q -9 SRChat || true
+
+exit 0
