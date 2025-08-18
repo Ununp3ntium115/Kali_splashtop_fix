@@ -66,7 +66,10 @@ splashtop-streamer --version
 
 ### Common Issues:
 ```bash
-# If dependencies are missing:
+# If you get "policykit-1 does not have an installable package" error:
+./fix-dependencies.sh
+
+# If other dependencies are missing:
 sudo apt-get install -f
 
 # Check service logs:

@@ -39,7 +39,7 @@
 sudo apt update
 
 # Install required dependencies (most should already be available)
-sudo apt install -y curl fuse pulseaudio-utils policykit-1 x11-xserver-utils xinput
+sudo apt install -y curl fuse pulseaudio-utils polkitd x11-xserver-utils xinput
 ```
 
 ### Install the Package
