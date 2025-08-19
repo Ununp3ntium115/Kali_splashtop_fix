@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This repository contains a modified Splashtop Streamer package specifically adapted for **Kali Linux 2025.2 compatibility**, along with comprehensive setup scripts for creating a complete remote desktop environment. The project transforms the original Ubuntu-targeted package into a Kali Linux-optimized solution with additional RDP functionality.
+This repository contains a **FAILED ATTEMPT** to adapt Splashtop Streamer for **Kali Linux 2025.2 compatibility**. While the package modification was successful, the core binary experiences fatal compatibility issues that prevent functionality.
+
+**PROJECT STATUS: FAILED - SPLASHTOP DOES NOT WORK ON KALI LINUX 2025.2**
 
 ## Core Architecture
 
@@ -113,7 +115,7 @@ All setup scripts implement standardized patterns:
 Scripts detect active display managers through `systemctl is-active` and configuration file presence, then apply appropriate modifications for each DM type.
 
 **Network Service Configuration**:
-RDP server setup integrates with system firewall (UFW/iptables), configures audio redirection through PulseAudio modules, and creates management utilities with desktop integration.
+RDP server setup integrates with system firewall (UFW/iptables), configures audio redirection through PulseAudio modules, and creates management utilities with desktop integration. VNC components have been removed to focus solely on RDP and Splashtop protocols.
 
 **Cross-Platform Compatibility**:
 Windows RDP client tools include protocol detection, connection profiling, and network discovery capabilities that work seamlessly with both Windows targets and the configured Kali RDP server.
@@ -122,13 +124,14 @@ Windows RDP client tools include protocol detection, connection profiling, and n
 
 ### Critical Issue: SRFeature Binary Segmentation Fault
 
-**Problem**: The SRFeature binary experiences segmentation faults when launched with GUI, causing service crashes.
+**Problem**: The SRFeature binary experiences segmentation faults when launched with GUI, causing service crashes. This is the primary blocker preventing Splashtop from functioning on Kali Linux 2025.2.
 
 **Symptoms**:
 - Service shows "Permission denied" errors in systemd logs
 - Binary crashes with segfault when executed directly
 - PulseAudio connection failures: "Connection refused pa_context_connect() failed"
 - Service starts briefly then crashes when GUI components load
+- systemctl status shows "Process exited with failure code"
 
 **Diagnostic Commands**:
 ```bash
@@ -147,16 +150,24 @@ ldd /opt/splashtop-streamer/SRFeature | grep "not found"
 ```
 
 **Root Causes**:
-1. **Library Compatibility**: Ubuntu libraries may be incompatible with Kali's newer glibc/library versions
-2. **PulseAudio Integration**: Service user lacks proper PulseAudio session access
-3. **X11 Display Access**: Insufficient permissions for GUI rendering in systemd context
-4. **Missing Runtime Dependencies**: Some required libraries may not be properly linked
+1. **Library Compatibility**: Ubuntu libraries incompatible with Kali's newer glibc/library versions
+2. **Binary Architecture Mismatch**: The Ubuntu-targeted binary may not be fully compatible with Kali's Debian unstable base
+3. **PulseAudio Integration**: Service user lacks proper PulseAudio session access
+4. **X11 Display Access**: Insufficient permissions for GUI rendering in systemd context
+5. **Missing Runtime Dependencies**: Some required libraries may not be properly linked
+6. **Kernel Version Differences**: Kali 2025.2 uses newer kernel that may expose compatibility issues
+
+**Status**: **CRITICAL - NOT WORKING**
 
 **Fix Approaches** (in order of priority):
-1. **Library Dependency Analysis**: Use `ldd` and `objdump` to identify missing/incompatible libraries
-2. **PulseAudio Configuration**: Configure proper audio session for splashtop-streamer user
-3. **X11 Access Rights**: Ensure proper DISPLAY environment and Xauth permissions
-4. **Alternative Binary Source**: Consider extracting from newer Splashtop releases targeting Debian 12/Ubuntu 24.04
+1. **Binary Replacement**: Extract SRFeature binary from newer Splashtop releases targeting Debian 12/Ubuntu 24.04
+2. **Library Dependency Analysis**: Use `ldd` and `objdump` to identify missing/incompatible libraries
+3. **Alternative Installation Method**: Try installing original Ubuntu package with compatibility layer
+4. **Manual Binary Compilation**: Reverse-engineer and recompile from scratch (advanced)
+5. **PulseAudio Configuration**: Configure proper audio session for splashtop-streamer user
+6. **X11 Access Rights**: Ensure proper DISPLAY environment and Xauth permissions
+
+**Current Recommendation**: Use RDP server setup instead of Splashtop until binary compatibility is resolved.
 
 ### Troubleshooting Tools
 

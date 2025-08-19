@@ -12,9 +12,16 @@
       "Bash(git config:*)",
       "Bash(git add:*)",
       "Bash(git push:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ldd:*)",
+      "Bash(sudo systemctl status:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [],
+    "additionalDirectories": [
+      "D:\\d\\GitRepos\\Splashtop-Fix",
+      "D:\\opt"
+    ]
   }
 }

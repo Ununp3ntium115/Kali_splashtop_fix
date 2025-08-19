@@ -232,7 +232,7 @@ add_section "CRASH ANALYSIS SUMMARY"
         recommendations+=("Run manual test: sudo -u splashtop-streamer /opt/splashtop-streamer/SRFeature --help")
         recommendations+=("Enable core dumps: echo '/tmp/core.%e.%p' | sudo tee /proc/sys/kernel/core_pattern")
         recommendations+=("Test with strace: sudo strace -f -o /tmp/splashtop.trace /opt/splashtop-streamer/SRFeature")
-        recommendations+=("Check for conflicting processes: ps aux | grep -E '(vnc|rdp|teamviewer)'")
+        recommendations+=("Check for conflicting processes: ps aux | grep -E '(rdp|teamviewer)'")
     fi
     
     for i in "${!recommendations[@]}"; do
